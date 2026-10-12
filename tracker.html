@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es" data-game="vc">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>GTA Saga · 100% Tracker</title>
+
+<style>
+/* =========================================================
+   TOKENS & THEMES
+   ========================================================= */
+@property --c1 { syntax: "<color>"; inherits: true; initial-value: #f43f5e; }
+@property --c2 { syntax: "<color>"; inherits: true; initial-value: #ec4899; }
+@property --c3 { syntax: "<color>"; inherits: true; initial-value: #22d3ee; }
+@property --c4 { syntax: "<color>"; inherits: true; initial-value: #7c3aed; }
+@property --bg  { syntax: "<color>"; inherits: true; initial-value: #0a0414; }
+
+:root {
+  --font: "Inter", "SF Pro Display", "SF Pro Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --text: #f4f4f8;
+  --muted: rgba(244, 244, 248, .62);
+  --faint: rgba(244, 244, 248, .38);
+  --stroke: rgba(255, 255, 255, .08);
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --radius: 22px;
+
+  /* Vice City (default) */
+  --c1: #f43f5e;   /* rosa/rojo neón */
+  --c2: #ec4899;   /* magenta neón */
+  --c3: #22d3ee;   /* cian eléctrico */
+  --c4: #7c3aed;   /* púrpura profundo */
+  --bg:  #0a0414;
+
+  transition: --c1 .7s ease, --c2 .7s ease, --c3 .7s ease, --c4 .7s ease, --bg .7s ease;
+}
+
+:root[data-game="g3"] {
+  --c1: #3b82f6;   /* azul eléctrico */
+  --c2: #0e7490;   /* cian oscuro */
+  --c3: #94a3b8;   /* acero */
+  --c4: #1e3a8a;   /* azul marino */
+  --bg:  #050a14;
+}
+
+/* =========================================================
+   BASE
+   ========================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { color-scheme: dark; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.45;
+  overflow-x: hidden;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; }
+
+:focus-visible { outline: 2px solid var(--c3); outline-offset: 3px; border-radius: 10px; }
+
+/* Mesh de fondo: orbes difuminados + grano sutil */
+.mesh {
+  position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+  background:
+    radial-gradient(1200px 700px at 50% -10%, color-mix(in srgb, var(--c4) 35%, transparent), transparent 70%),
+    var(--bg);
+}
+.orb {
+  position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55;
+  will-change: transform;
+  animation: float 22s ease-in-out infinite alternate;
+}
+.orb.o1 { width: 46vmax; height: 46vmax; left: -12vmax; top: -10vmax; background: var(--c1); }
+.orb.o2 { width: 40vmax; height: 40vmax; right: -14vmax; top: 18vh;   background: var(--c3); opacity: .35; animation-duration: 28s; animation-delay: -6s; }
+.orb.o3 { width: 36vmax; height: 36vmax; left: 20vw;  bottom: -18vmax; background: var(--c4); opacity: .55; animation-duration: 32s; animation-delay: -12s; }
+.orb.o4 { width: 22vmax; height: 22vmax; right: 12vw; bottom: 8vh; background: var(--c2); opacity: .30; animation-duration: 25s; animation-delay: -3s; }
+
+@keyframes float {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(6vw, 5vh, 0) scale(1.15); }
+}
+
+.mesh::after { /* viñeta + grano */
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, .55) 100%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.5'/></svg>");
+  opacity: .9; mix-blend-mode: soft-light;
+}
+
+/* =========================================================
+   GLASS
+   ========================================================= */
+.glass {
+  position: relative;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.085) 0%, rgba(255,255,255,.025) 45%, rgba(255,255,255,.05) 100%);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  -webkit-backdrop-filter: blur(26px) saturate(165%);
+          backdrop-filter: blur(26px) saturate(165%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 -1px 0 rgba(255,255,255,.03),
+    0 24px 60px -24px rgba(0,0,0,.75),
+    0 2px 10px rgba(0,0,0,.25);
+  isolation: isolate;
+}
+.glass::before { /* reflejo especular superior */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1;
+  background:
+    radial-gradient(120% 60% at 15% 0%, rgba(255,255,255,.12), transparent 55%),
+    radial-gradient(80% 50% at 100% 100%, color-mix(in srgb, var(--c1) 10%, transparent), transparent 70%);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: rgba(24, 20, 36, .88); }
+}
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+.app { width: min(920px, 100% - 32px); margin: 0 auto; padding: 28px 0 80px; }
+
+header.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-bottom: 20px;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark {
+  width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+  font-weight: 800; letter-spacing: -.04em; font-size: 15px;
+  background: linear-gradient(135deg, var(--c1), var(--c2) 55%, var(--c4));
+  box-shadow: 0 8px 24px -6px var(--c1), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.brand h1 { margin: 0; font-size: 18px; letter-spacing: -.02em; font-weight: 700; }
+.brand p  { margin: 0; font-size: 12px; color: var(--muted); }
+
+.tools { display: flex; gap: 8px; }
+.icon-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px;
+  border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--muted);
+  background: rgba(255,255,255,.05); border: 1px solid var(--stroke);
+  transition: color .25s, background .25s, border-color .25s, transform .25s var(--ease);
+}
+.icon-btn:hover { color: var(--text); background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.16); transform: translateY(-1px); }
+.icon-btn:active { transform: translateY(0) scale(.97); }
+.icon-btn.danger:hover { color: #fecaca; border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.12); }
+
+/* Tabs */
+.tabs {
+  --pad: 5px;
+  position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  padding: var(--pad); border-radius: 999px; margin-bottom: 20px;
+}
+.tab-indicator {
+  position: absolute; top: var(--pad); bottom: var(--pad); left: var(--pad);
+  width: calc((100% - var(--pad) * 2) / 2); border-radius: 999px; z-index: 0;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c1) 80%, #000), color-mix(in srgb, var(--c2) 75%, #000));
+  box-shadow: 0 8px 28px -8px var(--c1), inset 0 1px 0 rgba(255,255,255,.35);
+  transition: transform .55s var(--ease);
+}
+:root[data-game="g3"] .tab-indicator { transform: translateX(100%); }
+
+.tab {
+  position: relative; z-index: 1; border: 0; background: none; padding: 13px 10px;
+  font-weight: 600; font-size: 15px; letter-spacing: -.01em; color: var(--muted);
+  border-radius: 999px; transition: color .3s;
+}
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
+.tab small { font-weight: 500; opacity: .75; margin-left: 6px; font-variant-numeric: tabular-nums; }
+
+/* Hero / barra de estado */
+.hero { padding: 28px 30px 26px; margin-bottom: 18px; overflow: hidden; }
+.hero-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.hero-title { font-size: 13px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); font-weight: 600; margin: 0 0 6px; }
+.hero-game { font-size: 15px; font-weight: 600; margin: 0; color: var(--text); }
+.percent {
+  font-size: clamp(64px, 14vw, 112px); font-weight: 800; letter-spacing: -.06em; line-height: .9;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(135deg, #fff 0%, var(--c2) 55%, var(--c3) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 6px 30px color-mix(in srgb, var(--c1) 45%, transparent));
+}
+.percent sup { font-size: .38em; font-weight: 700; vertical-align: top; position: relative; top: .18em; margin-left: .04em; letter-spacing: 0; }
+
+.stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.chip {
+  padding: 10px 14px; border-radius: 14px; min-width: 112px;
+  background: rgba(255,255,255,.045); border: 1px solid var(--stroke);
+}
+.chip b { display: block; font-size: 18px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.chip span { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+.bar {
+  position: relative; height: 14px; border-radius: 999px; margin-top: 24px; overflow: hidden;
+  background: rgba(0,0,0,.35); box-shadow: inset 0 1px 3px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.06);
+}
+.bar-fill {
+  position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: inherit;
+  background: linear-gradient(90deg, var(--c4), var(--c1), var(--c2), var(--c3), var(--c1));
+  background-size: 250% 100%;
+  animation: flow 6s linear infinite;
+  transition: width .9s var(--ease);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--c2) 70%, transparent);
+}
+.bar-fill::after { /* brillo superior */
+  content: ""; position: absolute; inset: 1px 6px auto 6px; height: 40%; border-radius: 999px;
+  background: linear-gradient(rgba(255,255,255,.55), rgba(255,255,255,0));
+}
+@keyframes flow { to { background-position: -250% 0; } }
+
+.hero.complete { border-color: color-mix(in srgb, var(--c3) 60%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 60px -10px var(--c3), 0 24px 60px -24px rgba(0,0,0,.75); }
+.badge-100 {
+  display: none; margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--c3);
+}
+.hero.complete .badge-100 { display: block; }
+
+/* =========================================================
+   SECCIONES (accordions)
+   ========================================================= */
+.list-tools { display: flex; justify-content: flex-end; gap: 8px; margin: 0 4px 12px; }
+.list-tools .icon-btn { height: 30px; font-size: 12px; padding: 0 12px; }
+
+.sections { display: grid; gap: 14px; }
+.sections.enter .section { animation: rise .6s var(--ease) backwards; animation-delay: calc(var(--i) * 60ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+
+.section { overflow: hidden; transition: border-color .3s, box-shadow .3s; }
+.section:hover { border-color: rgba(255,255,255,.14); }
+.section.all-done { border-color: color-mix(in srgb, var(--c3) 38%, transparent); }
+
+.sec-head {
+  width: 100%; display: flex; align-items: center; gap: 14px; padding: 18px 20px;
+  background: none; border: 0; text-align: left;
+}
+.sec-icon {
+  flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 19px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c1) 35%, transparent), color-mix(in srgb, var(--c4) 35%, transparent));
+  border: 1px solid rgba(255,255,255,.12); box-shadow: inset 0 1px 0 rgba(255,255,255,.2);
+}
+.sec-info { flex: 1; min-width: 0; }
+.sec-name { font-size: 16px; font-weight: 650; letter-spacing: -.015em; margin: 0; }
+.sec-count { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 1px; }
+.sec-count b { color: var(--text); font-weight: 650; }
+.all-done .sec-count b { color: var(--c3); }
+
+.mini { flex: none; width: 84px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+.mini i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--c1), var(--c3)); transition: width .6s var(--ease); }
+.chev { flex: none; width: 20px; height: 20px; color: var(--muted); transition: transform .45s var(--ease), color .25s; }
+.sec-head[aria-expanded="true"] .chev { transform: rotate(180deg); color: var(--text); }
+.sec-head:hover .chev { color: var(--text); }
+
+.sec-body {
+  display: grid; grid-template-rows: 0fr; visibility: hidden;
+  transition: grid-template-rows .5s var(--ease), visibility 0s .5s;
+}
+.section.open .sec-body { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows .5s var(--ease), visibility 0s 0s; }
+.sec-inner { overflow: hidden; min-height: 0; }
+.items { list-style: none; margin: 0; padding: 0 12px 12px; display: grid; gap: 4px; border-top: 1px solid transparent; }
+.section.open .items { padding-top: 4px; }
+
+/* Items */
+.item {
+  position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 12px;
+  border-radius: 14px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
+  border: 1px solid transparent;
+  transition: background .3s, border-color .3s, transform .3s var(--ease);
+}
+.item::after { /* brillo hover */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: radial-gradient(240px 80px at var(--mx, 50%) 50%, color-mix(in srgb, var(--c2) 20%, transparent), transparent 70%);
+  transition: opacity .3s;
+}
+.item:hover { background: rgba(255,255,255,.045); border-color: rgba(255,255,255,.07); }
+.item:hover::after { opacity: 1; }
+.item:active { transform: scale(.992); }
+.item:has(input:focus-visible) { outline: 2px solid var(--c3); outline-offset: 1px; }
+
+.item input { position: absolute; opacity: 0; pointer-events: none; }
+
+.box {
+  flex: none; width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center;
+  background: rgba(0,0,0,.3); border: 1.5px solid rgba(255,255,255,.22);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.35);
+  transition: background .35s var(--ease), border-color .35s, box-shadow .35s, transform .45s var(--ease);
+}
+.item:hover .box { border-color: rgba(255,255,255,.45); }
+.box svg { width: 16px; height: 16px; overflow: visible; }
+.box path {
+  fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .4s var(--ease) .05s;
+}
+.item.done .box {
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+  border-color: transparent; transform: scale(1.04);
+  box-shadow: 0 6px 18px -4px var(--c1), inset 0 1px 0 rgba(255,255,255,.45);
+}
+.item.done .box path { stroke-dashoffset: 0; }
+.item.pop .box { animation: pop .5s var(--ease); }
+@keyframes pop { 0% { transform: scale(.8); } 55% { transform: scale(1.25); } 100% { transform: scale(1.04); } }
+
+.txt { flex: 1; min-width: 0; }
+.t { font-size: 15px; font-weight: 550; letter-spacing: -.01em; transition: color .3s, opacity .3s; }
+.d { font-size: 12.5px; color: var(--faint); margin-top: 1px; transition: color .3s; }
+.item.done .t { color: var(--muted); }
+.item.done .d { color: var(--faint); opacity: .8; }
+.item.done .t {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 55% / 100% 1.5px;
+}
+.item:not(.done) .t { background: linear-gradient(currentColor, currentColor) no-repeat 0 55% / 0% 1.5px; }
+.t { transition: color .3s, background-size .45s var(--ease); }
+
+.pts {
+  flex: none; font-size: 11.5px; font-weight: 600; color: var(--faint); padding: 3px 9px; border-radius: 999px;
+  background: rgba(255,255,255,.05); border: 1px solid var(--stroke); font-variant-numeric: tabular-nums;
+  transition: color .3s, border-color .3s, background .3s;
+}
+.item.done .pts { color: var(--c3); border-color: color-mix(in srgb, var(--c3) 35%, transparent); background: color-mix(in srgb, var(--c3) 10%, transparent); }
+
+footer { text-align: center; color: var(--faint); font-size: 12px; margin-top: 34px; }
+
+/* Toast */
+.toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 30px); opacity: 0; pointer-events: none;
+  padding: 11px 18px; border-radius: 999px; font-size: 13.5px; font-weight: 500; z-index: 10;
+  transition: opacity .35s, transform .5s var(--ease);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .app { width: calc(100% - 20px); padding-top: 16px; }
+  .hero { padding: 22px 20px; }
+  .mini { display: none; }
+  .tab small { display: none; }
+  .btn-label { display: none; }
+  .icon-btn { padding: 0 12px; }
+  .pts { display: none; }
+  .chip { min-width: 0; flex: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; transition-delay: 0s !important; }
+}
+</style>
+</head>
+
+<body>
+<div class="mesh" aria-hidden="true">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="orb o4"></div>
+</div>
+
+<main class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">100</div>
+      <div>
+        <h1>GTA Saga Tracker</h1>
+        <p>Seguimiento al 100%</p>
+      </div>
+    </div>
+    <div class="tools">
+      <button class="icon-btn" id="btnExport" title="Exportar progreso (JSON)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        <span class="btn-label">Exportar</span>
+      </button>
+      <button class="icon-btn" id="btnImport" title="Importar progreso (JSON)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 0L8 7m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        <span class="btn-label">Importar</span>
+      </button>
+      <button class="icon-btn danger" id="btnReset" title="Restablecer este juego">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8M3 3v5h5"/></svg>
+        <span class="btn-label">Restablecer</span>
+      </button>
+      <input type="file" id="fileImport" accept="application/json,.json" hidden>
+    </div>
+  </header>
+
+  <nav class="tabs glass" role="tablist" aria-label="Juegos">
+    <span class="tab-indicator" aria-hidden="true"></span>
+    <button class="tab" role="tab" id="tab-vc" data-game="vc" aria-selected="true" aria-controls="panel">GTA: Vice City <small id="tabPct-vc"></small></button>
+    <button class="tab" role="tab" id="tab-g3" data-game="g3" aria-selected="false" aria-controls="panel" tabindex="-1">GTA III <small id="tabPct-g3"></small></button>
+  </nav>
+
+  <section class="hero glass" id="hero" aria-live="polite">
+    <div class="hero-row">
+      <div>
+        <p class="hero-title">Progreso total</p>
+        <p class="hero-game" id="heroGame"></p>
+        <div class="percent" aria-label="Porcentaje completado"><span id="pctNum">0</span><sup>%</sup></div>
+      </div>
+      <div class="stats">
+        <div class="chip"><b id="stDone">0/0</b><span>Tareas</span></div>
+        <div class="chip"><b id="stPts">0</b><span>Pendiente</span></div>
+      </div>
+    </div>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar">
+      <div class="bar-fill" id="barFill"></div>
+    </div>
+    <div class="badge-100">✦ ¡Completado al 100%! Enhorabuena.</div>
+  </section>
+
+  <div class="list-tools">
+    <button class="icon-btn" id="btnExpand">Expandir todo</button>
+    <button class="icon-btn" id="btnCollapse">Plegar todo</button>
+  </div>
+
+  <div class="sections" id="panel" role="tabpanel"></div>
+
+  <footer>Tu progreso se guarda automáticamente en este navegador · Cada juego es independiente</footer>
+</main>
+
+<div class="toast glass" id="toast" role="status"></div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   1) BASE DE DATOS
+   Cada tarea: { id, t: título, d: detalle, w: peso (puntos), done: estado inicial }
+   El % total = suma de pesos completados / suma de pesos totales.
+   Edita `w` para ajustar cuánto vale cada tarea.
+   ========================================================= */
+const GAMES = {
+  vc: {
+    name: "GTA: Vice City",
+    short: "Vice City",
+    categories: [
+      { id: "collect", name: "Coleccionables y Saltos", icon: "💎", items: [
+        { id: "jumps",   t: "36 Saltos Únicos",           d: "Unique Stunt Jumps",            w: 22, done: true },
+        { id: "rampage", t: "35 Masacres",                d: "Rampages",                       w: 20, done: true },
+        { id: "robs",    t: "15 Tiendas Asaltadas",       d: "Robo a comercios",               w: 12, done: true },
+        { id: "tikis",   t: "100 Paquetes Ocultos",       d: "Tikis / Hidden Packages",        w: 6 },
+      ]},
+      { id: "service", name: "Vehículos de Servicio", icon: "🚒", items: [
+        { id: "fire",    t: "Bombero Nivel 12",           d: "Firefighter",                    w: 8, done: true },
+        { id: "pizza",   t: "Pizzero Nivel 10",           d: "Pizza Boy",                      w: 8, done: true },
+        { id: "ambu",    t: "Ambulancia Nivel 12",        d: "Paramedic",                      w: 8, done: true },
+        { id: "taxi",    t: "Taxista",                    d: "100 carreras totales · pendiente acumular las últimas 40", w: 3 },
+        { id: "vigi",    t: "Justiciero Nivel 12",        d: "Vigilante con Hunter / Rhino",   w: 3 },
+      ]},
+      { id: "biz", name: "Negocios y Pisos Francos", icon: "🏢", items: [
+        { id: "safe",    t: "7 Pisos Francos Comprados",  d: "Safehouses",                     w: 12, done: true },
+        { id: "kauf",    t: "Kaufman Cabs",               d: "3 misiones",                     w: 8,  done: true },
+        { id: "studio",  t: "Estudio de Cine · InterGlobal Studios", d: "4 misiones",           w: 12, done: true },
+        { id: "sun-r",   t: "Sunshine Autos: 6 Carreras", d: "Street races",                   w: 10, done: true },
+        { id: "sun-1",   t: "Sunshine Autos: Entrega Lista 1", d: "Import/Export",             w: 4,  done: true },
+        { id: "sun-2",   t: "Sunshine Autos: Entrega Lista 2", d: "Falta entregar Stretch",    w: 2 },
+        { id: "sun-3",   t: "Sunshine Autos: Entrega Lista 3", d: "Import/Export",             w: 2 },
+        { id: "sun-4",   t: "Sunshine Autos: Entrega Lista 4", d: "Import/Export",             w: 2 },
+        { id: "cherry",  t: "Cherry Popper",              d: "50 helados seguidos",            w: 2 },
+      ]},
+      { id: "side", name: "Secundarias de Bandas y Armas", icon: "🔫", items: [
+        { id: "assas",   t: "Contratos de Asesinato",     d: "Cabinas telefónicas",            w: 12, done: true },
+        { id: "range",   t: "Galería de Tiro",            d: "45+ puntos · Ammu-Nation",       w: 8,  done: true },
+        { id: "phil",    t: "Phil Cassidy",               d: "2 misiones",                     w: 2 },
+        { id: "love",    t: "Love Fist",                  d: "Misiones de banda",              w: 2 },
+        { id: "mitch",   t: "Mitch Baker / Moteros",      d: "3 misiones",                     w: 2 },
+        { id: "aunt",    t: "Tía Poulet / Haitianos",     d: "3 misiones",                     w: 2 },
+        { id: "umb",     t: "Umberto Robina / Cubanos",   d: "Cierre con Vudú Troyano",        w: 3 },
+      ]},
+      { id: "trials", name: "Pruebas Contrarreloj y Circuitos", icon: "⏱️", items: [
+        { id: "cone",    t: "Cone Crazy",                 d: "Stallion en parking",            w: 1 },
+        { id: "pcj",     t: "PCJ Playground",             d: "Moto en Ocean Beach",            w: 1 },
+        { id: "dirt",    t: "Trial by Dirt",              d: "Sánchez en pista de tierra",     w: 1 },
+        { id: "track",   t: "Test Track",                 d: "Landstalker en pista de tierra", w: 1 },
+        { id: "rcb",     t: "RC Bandit",                  d: "Top Fun · playa",                w: 1 },
+        { id: "rcbar",   t: "RC Baron",                   d: "Top Fun · tejado del mall",      w: 1 },
+        { id: "rcr",     t: "RC Raider",                  d: "Top Fun · aeropuerto",           w: 1 },
+        { id: "sp-ob",   t: "Sparrow Checkpoint: Ocean Beach", d: "Helicóptero",               w: 1 },
+        { id: "sp-vp",   t: "Sparrow Checkpoint: Vice Point",  d: "Helicóptero",               w: 1 },
+        { id: "sp-lh",   t: "Sparrow Checkpoint: Little Haiti", d: "Helicóptero",              w: 1 },
+        { id: "sp-dt",   t: "Sparrow Checkpoint: Downtown",    d: "Helicóptero",               w: 1 },
+      ]},
+      { id: "final", name: "Misión Final", icon: "👑", items: [
+        { id: "last",    t: "«Mantén cerca a tus amigos…»", d: "Mansión de Diaz",              w: 14 },
+      ]},
+    ],
+  },
+
+  g3: {
+    name: "GTA III",
+    short: "GTA III",
+    categories: [
+      { id: "main", name: "Misiones Principales", icon: "🏙️", items: [
+        { id: "portland",  t: "Historia de Portland",       d: "Isla de Portland",             w: 14 },
+        { id: "staunton",  t: "Historia de Staunton Island", d: "Isla de Staunton",            w: 16 },
+        { id: "shoreside", t: "Historia de Shoreside Vale", d: "Shoreside Vale",               w: 14 },
+      ]},
+      { id: "phone", name: "Misiones de Teléfono", icon: "📞", items: [
+        { id: "burro",   t: "El Burro",                     d: "Hepcat / Diablo",              w: 2 },
+        { id: "courtney",t: "King Courtney",                d: "Yardies",                      w: 2 },
+        { id: "dice",    t: "D-Ice",                        d: "Red Jacks",                    w: 2 },
+        { id: "marty",   t: "Marty Chonks",                 d: "Fábrica de comida de perro",   w: 2 },
+      ]},
+      { id: "service", name: "Vehículos de Servicio", icon: "🚑", items: [
+        { id: "ambu",    t: "Ambulancia Nivel 12",          d: "Paramédico",                   w: 3 },
+        { id: "fire",    t: "Bombero",                      d: "20 apagados en Portland · 20 en Staunton · 20 en Shoreside", w: 3 },
+        { id: "vigi",    t: "Vigilante / Policía",          d: "20 arrestos en Portland · 20 en Staunton · 20 en Shoreside", w: 3 },
+        { id: "taxi",    t: "Taxista",                      d: "100 carreras totales",         w: 3 },
+      ]},
+      { id: "collect", name: "Coleccionables y Desafíos", icon: "📦", items: [
+        { id: "packs",   t: "100 Paquetes Ocultos",         d: "Hidden Packages",              w: 6 },
+        { id: "rampage", t: "20 Masacres",                  d: "Rampages",                     w: 4 },
+        { id: "jumps",   t: "20 Saltos Únicos",             d: "Unique Stunt Jumps",           w: 4 },
+      ]},
+      { id: "export", name: "Exportación de Vehículos", icon: "🚢", items: [
+        { id: "ex-por",  t: "Garaje de Importación/Exportación de Portland", d: "16 coches", w: 3 },
+        { id: "ex-dock", t: "Grúa de Barco en Portland Docks", d: "7 vehículos de servicio/emergencia", w: 3 },
+        { id: "ex-sho",  t: "Garaje de Shoreside Vale",     d: "16 coches",                    w: 3 },
+      ]},
+      { id: "offroad", name: "Misiones Todoterreno y RC", icon: "🏁", items: [
+        { id: "pat",     t: "Patriot Playground",           d: "Todoterreno",                  w: 1.5 },
+        { id: "ride",    t: "A Ride in the Park",           d: "Todoterreno",                  w: 1.5 },
+        { id: "multi",   t: "Multi-Storey Mayhem",          d: "Todoterreno",                  w: 1.5 },
+        { id: "gripped", t: "Gripped!",                     d: "Todoterreno",                  w: 1.5 },
+        { id: "rc-dia",  t: "RC Toyz: Diablo Destruction",  d: "RC Toyz",                      w: 1.75 },
+        { id: "rc-maf",  t: "RC Toyz: Mafia Massacre",      d: "RC Toyz",                      w: 1.75 },
+        { id: "rc-cas",  t: "RC Toyz: Casino Calamity",     d: "RC Toyz",                      w: 1.75 },
+        { id: "rc-rum",  t: "RC Toyz: Rumpo Rampage",       d: "RC Toyz",                      w: 1.75 },
+      ]},
+    ],
+  },
+};
+
+/* =========================================================
+   2) PERSISTENCIA (localStorage, independiente por juego)
+   ========================================================= */
+const Store = {
+  key: (g) => `gta-tracker:v1:${g}`,
+  uiKey: "gta-tracker:v1:ui",
+
+  load(game) {
+    const defaults = {};
+    GAMES[game].categories.forEach(c => c.items.forEach(i => defaults[i.id] = !!i.done));
+    const open = {};
+    GAMES[game].categories.forEach(c => open[c.id] = true);
+
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(this.key(game))); } catch {}
+
+    // Mezcla: lo guardado manda, lo nuevo en la base de datos toma el valor por defecto.
+    return {
+      checked: { ...defaults, ...(saved?.checked || {}) },
+      open:    { ...open,     ...(saved?.open    || {}) },
+    };
+  },
+
+  save(game, st) {
+    try { localStorage.setItem(this.key(game), JSON.stringify({ checked: st.checked, open: st.open })); }
+    catch { toast("No se pudo guardar (almacenamiento bloqueado)"); }
+  },
+
+  loadTab() {
+    try { const t = JSON.parse(localStorage.getItem(this.uiKey))?.tab; if (GAMES[t]) return t; } catch {}
+    return "vc";
+  },
+  saveTab(tab) { try { localStorage.setItem(this.uiKey, JSON.stringify({ tab })); } catch {} },
+};
+
+/* =========================================================
+   3) ESTADO Y CÁLCULOS
+   ========================================================= */
+const state = {
+  game: Store.loadTab(),
+  data: { vc: Store.load("vc"), g3: Store.load("g3") },
+};
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+function stats(game) {
+  const st = state.data[game];
+  let w = 0, wDone = 0, n = 0, nDone = 0;
+  GAMES[game].categories.forEach(c => c.items.forEach(i => {
+    w += i.w; n++;
+    if (st.checked[i.id]) { wDone += i.w; nDone++; }
+  }));
+  let pct = w ? (wDone / w) * 100 : 0;
+  const complete = n > 0 && nDone === n;
+  return { w, wDone, n, nDone, pct, complete,
+           shown: complete ? 100 : Math.min(99, Math.round(pct)) };
+}
+
+function catStats(game, cat) {
+  const st = state.data[game];
+  const done = cat.items.filter(i => st.checked[i.id]).length;
+  return { done, total: cat.items.length };
+}
+
+/* =========================================================
+   4) RENDER
+   ========================================================= */
+const panel = $("#panel");
+const CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const CHEV_SVG = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+
+const esc = (s) => String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+const fmtPts = (n) => (Number.isInteger(n) ? n : n.toFixed(2).replace(/0$/, "")) + " pts";
+
+function renderList(animate = true) {
+  const game = state.game, g = GAMES[game], st = state.data[game];
+
+  panel.setAttribute("aria-labelledby", `tab-${game}`);
+  panel.classList.toggle("enter", animate);
+
+  panel.innerHTML = g.categories.map((c, idx) => `
+    <article class="section glass ${st.open[c.id] ? "open" : ""}" data-cat="${c.id}" style="--i:${idx}">
+      <button class="sec-head" aria-expanded="${!!st.open[c.id]}" aria-controls="body-${c.id}">
+        <span class="sec-icon" aria-hidden="true">${c.icon}</span>
+        <span class="sec-info">
+          <h2 class="sec-name">${esc(c.name)}</h2>
+          <div class="sec-count"><b data-count>0</b> / ${c.items.length} completadas</div>
+        </span>
+        <span class="mini" aria-hidden="true"><i data-mini></i></span>
+        ${CHEV_SVG}
+      </button>
+      <div class="sec-body" id="body-${c.id}" role="region" aria-label="${esc(c.name)}">
+        <div class="sec-inner"${st.open[c.id] ? "" : " inert"}>
+          <ul class="items">
+            ${c.items.map(i => `
+              <li>
+                <label class="item" data-id="${i.id}">
+                  <input type="checkbox" data-id="${i.id}">
+                  <span class="box">${CHECK_SVG}</span>
+                  <span class="txt">
+                    <span class="t">${esc(i.t)}</span>
+                    <span class="d" ${i.d ? "" : "hidden"}>${esc(i.d || "")}</span>
+                  </span>
+                  <span class="pts">${fmtPts(i.w)}</span>
+                </label>
+              </li>`).join("")}
+          </ul>
+        </div>
+      </div>
+    </article>`).join("");
+
+  syncUI(false);
+}
+
+/* Sincroniza checkboxes, contadores, barras y hero sin reconstruir el DOM */
+function syncUI(animateNumber = true) {
+  const game = state.game, g = GAMES[game], st = state.data[game];
+
+  g.categories.forEach(c => {
+    const sec = $(`.section[data-cat="${c.id}"]`, panel);
+    if (!sec) return;
+    c.items.forEach(i => {
+      const row = $(`.item[data-id="${i.id}"]`, sec);
+      const inp = $("input", row);
+      const on = !!st.checked[i.id];
+      inp.checked = on;
+      row.classList.toggle("done", on);
+    });
+    const cs = catStats(game, c);
+    $("[data-count]", sec).textContent = cs.done;
+    $("[data-mini]", sec).style.width = (cs.done / cs.total * 100) + "%";
+    sec.classList.toggle("all-done", cs.done === cs.total);
+  });
+
+  const s = stats(game);
+  $("#heroGame").textContent = g.name;
+  $("#stDone").textContent = `${s.nDone}/${s.n}`;
+  $("#stPts").textContent = (Math.round((s.w - s.wDone) * 10) / 10) + " pts";
+  $("#barFill").style.width = s.pct + "%";
+  const bar = $("#bar");
+  bar.setAttribute("aria-valuenow", s.shown);
+  bar.setAttribute("aria-label", `${g.name}: ${s.shown}% completado`);
+  $("#hero").classList.toggle("complete", s.complete);
+  countTo($("#pctNum"), s.shown, animateNumber);
+  document.title = `${g.short} ${s.shown}% · GTA Tracker`;
+
+  Object.keys(GAMES).forEach(k => $(`#tabPct-${k}`).textContent = stats(k).shown + "%");
+}
+
+/* Número animado */
+let raf;
+function countTo(el, to, animate) {
+  const from = Number(el.dataset.v ?? to);
+  el.dataset.v = to;
+  cancelAnimationFrame(raf);
+  if (!animate || reduceMotion.matches || from === to) { el.textContent = to; return; }
+  const t0 = performance.now(), dur = 700;
+  const tick = (now) => {
+    const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(from + (to - from) * e);
+    if (p < 1) raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+
+/* =========================================================
+   5) INTERACCIONES
+   ========================================================= */
+// Marcar / desmarcar
+panel.addEventListener("change", (e) => {
+  const inp = e.target.closest("input[type=checkbox]");
+  if (!inp) return;
+  const st = state.data[state.game];
+  st.checked[inp.dataset.id] = inp.checked;
+  Store.save(state.game, st);
+
+  const row = inp.closest(".item");
+  if (inp.checked) { row.classList.remove("pop"); void row.offsetWidth; row.classList.add("pop"); }
+  syncUI(true);
+});
+
+// Acordeones
+panel.addEventListener("click", (e) => {
+  const head = e.target.closest(".sec-head");
+  if (!head) return;
+  const sec = head.closest(".section");
+  setOpen(sec, !sec.classList.contains("open"));
+  Store.save(state.game, state.data[state.game]);
+});
+
+function setOpen(sec, open) {
+  const st = state.data[state.game];
+  st.open[sec.dataset.cat] = open;
+  sec.classList.toggle("open", open);
+  $(".sec-head", sec).setAttribute("aria-expanded", open);
+  $(".sec-inner", sec).toggleAttribute("inert", !open);
+}
+
+$("#btnExpand").addEventListener("click", () => { $$(".section", panel).forEach(s => setOpen(s, true)); Store.save(state.game, state.data[state.game]); });
+$("#btnCollapse").addEventListener("click", () => { $$(".section", panel).forEach(s => setOpen(s, false)); Store.save(state.game, state.data[state.game]); });
+
+// Brillo que sigue al cursor
+panel.addEventListener("pointermove", (e) => {
+  const row = e.target.closest(".item");
+  if (!row) return;
+  row.style.setProperty("--mx", (e.clientX - row.getBoundingClientRect().left) + "px");
+});
+
+// Tabs
+function setGame(game, { focus = false } = {}) {
+  if (!GAMES[game]) return;
+  const changed = game !== state.game;
+  state.game = game;
+  document.documentElement.dataset.game = game;
+  $$(".tab").forEach(t => {
+    const on = t.dataset.game === game;
+    t.setAttribute("aria-selected", on);
+    t.tabIndex = on ? 0 : -1;
+    if (on && focus) t.focus();
+  });
+  Store.saveTab(game);
+  document.title = `${GAMES[game].short} ${stats(game).shown}% · GTA Tracker`;
+  renderList(changed);
+}
+
+$$(".tab").forEach(t => t.addEventListener("click", () => setGame(t.dataset.game)));
+$(".tabs").addEventListener("keydown", (e) => {
+  const keys = Object.keys(GAMES), i = keys.indexOf(state.game);
+  if (e.key === "ArrowRight") setGame(keys[(i + 1) % keys.length], { focus: true });
+  else if (e.key === "ArrowLeft") setGame(keys[(i - 1 + keys.length) % keys.length], { focus: true });
+  else return;
+  e.preventDefault();
+});
+
+// Restablecer (solo el juego activo)
+$("#btnReset").addEventListener("click", () => {
+  const g = GAMES[state.game];
+  if (!confirm(`¿Restablecer el progreso de ${g.name} a sus valores iniciales?`)) return;
+  localStorage.removeItem(Store.key(state.game));
+  state.data[state.game] = Store.load(state.game);
+  renderList(false);
+  toast(`${g.name} restablecido`);
+});
+
+// Exportar / Importar
+$("#btnExport").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify({ app: "gta-tracker", v: 1, data: state.data }, null, 2)], { type: "application/json" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "gta-tracker-progreso.json" });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast("Progreso exportado");
+});
+$("#btnImport").addEventListener("click", () => $("#fileImport").click());
+$("#fileImport").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try {
+    const json = JSON.parse(await f.text());
+    if (json.app !== "gta-tracker" || !json.data) throw 0;
+    Object.keys(GAMES).forEach(k => {
+      if (!json.data[k]) return;
+      localStorage.setItem(Store.key(k), JSON.stringify(json.data[k]));
+      state.data[k] = Store.load(k);
+    });
+    renderList(false);
+    toast("Progreso importado");
+  } catch { toast("Archivo no válido"); }
+});
+
+// Sincronizar entre pestañas del navegador
+addEventListener("storage", (e) => {
+  if (!e.key?.startsWith("gta-tracker:v1:") || e.key === Store.uiKey) return;
+  Object.keys(GAMES).forEach(k => state.data[k] = Store.load(k));
+  syncUI(true);
+});
+
+// Toast
+let toastTimer;
+function toast(msg) {
+  const el = $("#toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+/* =========================================================
+   6) ARRANQUE
+   ========================================================= */
+// Si es la primera visita, persistir los valores iniciales (p. ej. ~72% de Vice City)
+Object.keys(GAMES).forEach(k => { if (!localStorage.getItem(Store.key(k))) Store.save(k, state.data[k]); });
+setGame(state.game);
+</script>
+</body>
+</html>
